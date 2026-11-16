@@ -43,11 +43,13 @@ module Reweave
             key_loc = elem.key.location
             operator_loc = elem.operator_loc
 
-            if operator_loc && operator_loc.start_offset == key_loc.end_offset
-              # This is a hash rocket, convert it
-              replace_location(operator_loc, ":")
-              # Remove the leading colon from the symbol
-              replace_location(key_loc, key_loc.slice.sub(/^:/, ""))
+            if operator_loc && operator_loc.slice == "=>"
+              # This is a hash rocket, convert it in one replacement to avoid adjacent edit conflicts
+              # Replace from start of key to end of operator with "key:"
+              new_key = key_loc.slice.sub(/^:/, "") + ":"
+              start_offset = key_loc.start_offset
+              end_offset = operator_loc.end_offset
+              @edits.add(Editing.replace(source_id, start_offset, end_offset, new_key, recipe_name))
             end
           end
           super

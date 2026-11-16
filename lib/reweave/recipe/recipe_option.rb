@@ -37,7 +37,8 @@ module Reweave
       when Class, Module
         value.is_a?(@type)
       when Array
-        value.is_a?(Array) && value.all? { |v| type_match?(v) }
+        # Array type means union: value must match at least one of the types
+        @type.any? { |t| t.is_a?(Class) && value.is_a?(t) }
       else
         true
       end
