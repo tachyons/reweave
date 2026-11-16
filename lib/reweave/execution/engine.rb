@@ -6,6 +6,7 @@ require_relative "project"
 require_relative "../../reweave/results/execution_result"
 require_relative "../../reweave/results/changeset"
 require_relative "../../reweave/recipe/scanning_recipe"
+require_relative "../../reweave/semantic/analyzer"
 
 module Reweave
   module Execution
@@ -74,6 +75,11 @@ module Reweave
       def execute_on_project(recipe, path, patterns: nil, exclude: nil)
         project = Project.from_path(path, patterns: patterns || ["**/*.rb"], exclude: exclude || [])
         @change_set = Results::ChangeSet.new
+
+        # Build cross-file symbol table for semantic analysis
+        symbol_table = Semantic::Analyzer.new(project).analyze
+        @context.symbol_table = symbol_table
+        @context.stats[:symbols_resolved] = symbol_table.size
 
         # Expand composite recipes
         expanded_recipes = expand_recipes(recipe)
