@@ -93,6 +93,35 @@ module Reweave
       def recipe_name
         self.class.name
       end
+
+      # File operations for creating, deleting, renaming files
+      def create_file(path, contents)
+        @file_operations ||= []
+        @file_operations_set ||= Set.new
+        key = [:create, path]
+        @file_operations << {type: :create, path: path, contents: contents} unless @file_operations_set.include?(key)
+        @file_operations_set.add(key)
+      end
+
+      def delete_file(path)
+        @file_operations ||= []
+        @file_operations_set ||= Set.new
+        key = [:delete, path]
+        @file_operations << {type: :delete, path: path} unless @file_operations_set.include?(key)
+        @file_operations_set.add(key)
+      end
+
+      def rename_file(old_path, new_path)
+        @file_operations ||= []
+        @file_operations_set ||= Set.new
+        key = [:rename, old_path, new_path]
+        @file_operations << {type: :rename, old_path: old_path, new_path: new_path} unless @file_operations_set.include?(key)
+        @file_operations_set.add(key)
+      end
+
+      def file_operations
+        @file_operations || []
+      end
     end
   end
 end

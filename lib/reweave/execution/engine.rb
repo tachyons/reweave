@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require_relative "execution_context"
 require_relative "project"
 require_relative "../../reweave/results/execution_result"
@@ -14,6 +15,7 @@ module Reweave
       def initialize(dry_run: true, max_cycles: 10)
         @dry_run = dry_run
         @max_cycles = max_cycles
+        @processed_file_ops = Set.new
       end
 
       def run(recipe, path: ".", source: nil)
@@ -151,6 +153,78 @@ module Reweave
           @context.stats[:files_scanned] += 1
 
           edits = run_visitor_on_file(visitor, source_file)
+
+          # Handle file operations after each file visit
+          file_ops = visitor.file_operations
+          visitor.instance_variable_set(:@file_operations, [])
+          file_ops.each do |op|
+            # Create a unique key for this file operation to avoid duplicates across cycles
+            op_key = case op[:type]
+            when :create then [:create, op[:path]]
+            when :delete then [:delete, op[:path]]
+            when :rename then [:rename, op[:old_path], op[:new_path]]
+            end
+            next if @processed_file_ops.include?(op_key)
+            @processed_file_ops.add(op_key)
+
+            case op[:type]
+            when :create
+              full_path = File.join(project.root, op[:path])
+              if !@dry_run
+                FileUtils.mkdir_p(File.dirname(full_path))
+                File.write(full_path, op[:contents])
+                project.add_source_file(op[:path])
+              end
+              @change_set.add(Results::FileChange.new(
+                path: full_path,
+                original_source: "",
+                updated_source: op[:contents],
+                recipes: [recipe.display_name],
+                change_type: :created
+              ))
+              @context.stats[:files_created] += 1
+              any_changed = true
+            when :delete
+              full_path = File.join(project.root, op[:path])
+              if !@dry_run && File.exist?(full_path)
+                File.delete(full_path)
+                project.remove_source_file(op[:path])
+              end
+              source_file_for_delete = project.find_source_file(op[:path])
+              original = source_file_for_delete&.source || ""
+              @change_set.add(Results::FileChange.new(
+                path: full_path,
+                original_source: original,
+                updated_source: "",
+                recipes: [recipe.display_name],
+                change_type: :deleted
+              ))
+              @context.stats[:files_deleted] += 1
+              any_changed = true
+            when :rename
+              old_full = File.join(project.root, op[:old_path])
+              new_full = File.join(project.root, op[:new_path])
+              if !@dry_run && File.exist?(old_full)
+                FileUtils.mkdir_p(File.dirname(new_full))
+                File.rename(old_full, new_full)
+                project.remove_source_file(op[:old_path])
+                project.add_source_file(op[:new_path])
+              end
+              source_file_for_rename = project.find_source_file(op[:old_path])
+              original = source_file_for_rename&.source || ""
+              @change_set.add(Results::FileChange.new(
+                path: old_full,
+                original_source: original,
+                updated_source: original,
+                recipes: [recipe.display_name],
+                change_type: :renamed
+              ))
+              @context.stats[:files_deleted] += 1
+              @context.stats[:files_created] += 1
+              any_changed = true
+            end
+          end
+
           next if edits.empty?
 
           @context.stats[:files_matched] += 1
@@ -160,7 +234,7 @@ module Reweave
             source_file.apply_edits(edits)
             @change_set.add(Results::FileChange.new(
               path: source_file.path,
-              original_source: source_file.source, # This is the updated source after apply_edits
+              original_source: source_file.source,
               updated_source: source_file.source,
               recipes: [recipe.display_name],
               change_type: :modified
@@ -168,7 +242,6 @@ module Reweave
             @context.stats[:files_changed] += 1
             any_changed = true
           else
-            # For dry run, we need to compute what the result would be
             new_source = Editing::Editor.apply(source_file.source.dup, edits)
             if new_source != source_file.source
               @change_set.add(Results::FileChange.new(

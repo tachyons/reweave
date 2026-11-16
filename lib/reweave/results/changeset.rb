@@ -17,6 +17,7 @@ module Reweave
       end
 
       def changed?
+        return true if @change_type == :created || @change_type == :deleted || @change_type == :renamed
         @original_source != @updated_source
       end
 
