@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.summary = "Native Ruby source transformation framework inspired by OpenRewrite"
   spec.description = "Reweave is a Ruby-native framework for automated code refactoring, " \
                      "modernization, and large-scale source transformations using Prism parser."
-  spec.homepage = "https://github.com/reweave/reweave"
+  spec.homepage = "https://github.com/tachyons/reweave"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2"
 
