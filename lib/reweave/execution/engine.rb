@@ -18,7 +18,7 @@ module Reweave
         @processed_file_ops = Set.new
       end
 
-      def run(recipe, path: ".", source: nil)
+      def run(recipe, path: ".", source: nil, patterns: nil, exclude: nil)
         @context = ExecutionContext.new(
           project_root: path,
           dry_run: @dry_run,
@@ -29,7 +29,7 @@ module Reweave
           if source
             execute_on_source(recipe, source)
           else
-            execute_on_project(recipe, path)
+            execute_on_project(recipe, path, patterns: patterns, exclude: exclude)
           end
         rescue => e
           @context.error("Execution failed: #{e.message}")
@@ -71,8 +71,8 @@ module Reweave
         end
       end
 
-      def execute_on_project(recipe, path)
-        project = Project.from_path(path)
+      def execute_on_project(recipe, path, patterns: nil, exclude: nil)
+        project = Project.from_path(path, patterns: patterns || ["**/*.rb"], exclude: exclude || [])
         @change_set = Results::ChangeSet.new
 
         # Expand composite recipes

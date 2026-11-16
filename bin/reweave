@@ -23,45 +23,102 @@ rescue LoadError => e
   end
 end
 
+def parse_common_options(args)
+  options = {}
+  options[:dry_run] = args.delete("--dry-run") || args.delete("-n")
+  options[:path] = args.delete_at(args.index("--path") || args.index("-p") || 0)
+  options[:path] = "." if options[:path] == "--path" || options[:path] == "-p" || options[:path].nil?
+  options[:include] = args.delete_at(args.index("--include") + 1) if args.include?("--include")
+  options[:exclude] = args.delete_at(args.index("--exclude") + 1) if args.include?("--exclude")
+  options[:max_cycles] = args.delete_at(args.index("--max-cycles") + 1)&.to_i if args.include?("--max-cycles")
+  options[:json] = args.delete("--json")
+  options[:verbose] = args.delete("--verbose")
+  options
+end
+
+def print_result(result, json: false)
+  if json
+    require "json"
+    puts result.to_h.to_json
+  else
+    puts result.summary
+    if result.context.dry_run && result.changed?
+      puts "\n--- Diffs ---"
+      puts result.diffs
+    end
+  end
+end
+
 command = ARGV.shift
 
 case command
 when "run"
-  recipe_name = ARGV.shift
-  abort("Usage: reweave run <recipe> [options]") unless recipe_name
+  # Check for --config before parsing other options
+  config_idx = ARGV.index("--config") || ARGV.index("-c")
+  if config_idx
+    config_path = ARGV[config_idx + 1]
+    ARGV.delete_at(config_idx)
+    ARGV.delete_at(config_idx)
+    Reweave::REGISTRY.discover_recipes
+    begin
+      config = Reweave::Config.load(config_path)
+      recipe = Reweave::Config.build_recipe(config)
+    rescue Reweave::Config::ValidationError => e
+      abort("Validation error: #{e.message}")
+    end
+  else
+    recipe_name = ARGV.shift
+    abort("Usage: reweave run <recipe> [options]") unless recipe_name
+
+    Reweave::REGISTRY.discover_recipes
+    recipe_class = require_recipe(recipe_name)
+    abort("Recipe not found: #{recipe_name}") unless recipe_class
+
+    # Parse recipe options from remaining ARGV
+    options = {}
+    recipe_class.options.each do |name, opt|
+      long_name = name.to_s.gsub("_", "-")
+      idx = ARGV.index("--#{long_name}")
+      if idx
+        options[name] = ARGV[idx + 1]
+        ARGV.delete_at(idx)
+        ARGV.delete_at(idx)
+      end
+    end
+
+    recipe = recipe_class.new(**options)
+  end
+
+  common_opts = parse_common_options(ARGV)
+
+  result = Reweave.run(
+    recipe,
+    path: common_opts[:path],
+    dry_run: common_opts[:dry_run],
+    max_cycles: common_opts[:max_cycles] || 10,
+    patterns: common_opts[:include] ? [common_opts[:include]] : nil,
+    exclude: common_opts[:exclude] ? [common_opts[:exclude]] : nil
+  )
+
+  print_result(result, json: common_opts[:json])
+  exit(result.success? ? 0 : 1)
+
+when "validate"
+  config_path = ARGV.shift
+  abort("Usage: reweave validate <config.yml>") unless config_path
 
   Reweave::REGISTRY.discover_recipes
-  recipe_class = require_recipe(recipe_name)
-  abort("Recipe not found: #{recipe_name}") unless recipe_class
-
-  # Parse recipe options from remaining ARGV
-  options = {}
-  recipe_class.options.each do |name, opt|
-    long_name = name.to_s.gsub("_", "-")
-    idx = ARGV.index("--#{long_name}")
-    if idx
-      options[name] = ARGV[idx + 1]
-      ARGV.delete_at(idx)
-      ARGV.delete_at(idx)
-    end
+  begin
+    config = Reweave::Config.load(config_path)
+    puts "✓ Config is valid"
+    recipe = Reweave::Config.build_recipe(config)
+    puts "Recipe: #{recipe.class.name}"
+    puts "Display: #{recipe.display_name}"
+    exit 0
+  rescue Reweave::Config::ValidationError => e
+    puts "✗ Validation error: #{e.message}"
+    exit 2
   end
-
-  dry_run = ARGV.include?("--dry-run") || ARGV.include?("-n")
-  ARGV.delete("--dry-run")
-  ARGV.delete("-n")
-  path = ARGV.find { |a| !a.start_with?("-") } || "."
-
-  recipe = recipe_class.new(**options)
-
-  result = Reweave.run(recipe, path: path, dry_run: dry_run)
-  puts result.summary
-
-  if dry_run && result.changed?
-    puts "\n--- Diffs ---"
-    puts result.diffs
-  end
-
-  exit(result.success? ? 0 : 1)
 
 when "recipes"
   Reweave::REGISTRY.discover_recipes
@@ -90,6 +147,10 @@ when "describe"
     puts "    #{opt.description}" if opt.description
   end
 
+when "results"
+  # Show last execution results (would need persistence)
+  puts "Results command not yet implemented - would require persistent storage"
+
 when "roundtrip"
   file = ARGV.shift
   abort("Usage: reweave roundtrip <file.rb>") unless file
@@ -110,15 +171,30 @@ else
     Reweave - Automated Ruby source transformation
 
     Commands:
-      run <recipe> [--dry-run] [path]    Execute a recipe
-      recipes                            List available recipes
-      describe <recipe>                  Show recipe details
-      roundtrip <file.rb>                Test parsing a file
+      run <recipe> [options]              Execute a recipe
+      run --config <file.yml> [options]   Execute from YAML config
+      validate <config.yml>               Validate YAML config
+      recipes                             List available recipes
+      describe <recipe>                   Show recipe details
+      results                             Show last execution results
+      roundtrip <file.rb>                 Test parsing a file
+
+    Run options:
+      --dry-run, -n          Dry run mode (no disk writes)
+      --path, -p <path>      Project path (default: .)
+      --include <glob>       Include pattern (e.g., "**/*.rb")
+      --exclude <glob>       Exclude pattern (e.g., "vendor/**/*")
+      --max-cycles <n>       Max execution cycles (default: 10)
+      --json                 JSON output for automation
+      --verbose              Detailed logging
 
     Examples:
-      reweave run MyRecipe --dry-run
-      reweave run MyRecipe -n .
+      reweave run RenameMethod --old-name foo --new-name bar --dry-run
+      reweave run --config reweave.yml --dry-run
+      reweave validate reweave.yml
       reweave recipes
+      reweave describe RenameMethod
+
   USAGE
   exit 1
 end

@@ -9,6 +9,7 @@ require_relative "reweave/recipe"
 require_relative "reweave/execution"
 require_relative "reweave/results"
 require_relative "reweave/discovery/file_discoverer"
+require_relative "reweave/config"
 
 module Reweave
   class Error < StandardError; end
@@ -16,8 +17,8 @@ module Reweave
   class EditError < Error; end
   class RecipeError < Error; end
 
-  def self.run(recipe, path: ".", source: nil, dry_run: true, max_cycles: 10)
-    Execution::Engine.new(dry_run: dry_run, max_cycles: max_cycles).run(recipe, path: path, source: source)
+  def self.run(recipe, path: ".", source: nil, dry_run: true, max_cycles: 10, patterns: nil, exclude: nil)
+    Execution::Engine.new(dry_run: dry_run, max_cycles: max_cycles).run(recipe, path: path, source: source, patterns: patterns, exclude: exclude)
   end
 
   def self.parse(source, path: nil)
