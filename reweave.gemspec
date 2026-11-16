@@ -4,7 +4,7 @@ Gem::Specification.new do |spec|
   spec.name = "reweave"
   spec.version = "0.1.0"
   spec.authors = ["Reweave Contributors"]
-  spec.email = ["reweave@example.com"]
+  spec.email = ["aboobackervyd@gmail.com"]
 
   spec.summary = "Native Ruby source transformation framework inspired by OpenRewrite"
   spec.description = "Reweave is a Ruby-native framework for automated code refactoring, " \
