@@ -24,16 +24,32 @@ module Reweave
         @source_file.identity
       end
 
-      def visit(node)
+      def cursor
+        @cursor_stack.current
+      end
+
+      def traverse(node)
         return unless node
 
         cursor = build_cursor(node)
         @cursor_stack.push(cursor)
 
-        result = super
+        visit_node(node)
 
         @cursor_stack.pop
-        result
+      end
+
+      def visit_node(node)
+        method_name = "visit_#{node.class.name.split("::").last.gsub("Node", "").gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2').gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase}_node"
+        if respond_to?(method_name, true)
+          send(method_name, node)
+        else
+          visit_child_nodes(node)
+        end
+      end
+
+      def visit_child_nodes(node)
+        node.each_child_node { |child| traverse(child) }
       end
 
       def build_cursor(node)
@@ -43,8 +59,11 @@ module Reweave
         Cursor.new(node, parent: parent, index: index, path: path)
       end
 
-      def cursor
-        @cursor_stack.current
+      # Override Prism's default visit methods to use our traversal
+      Prism::Visitor.instance_methods(false).grep(/^visit_.*_node$/).each do |method|
+        define_method(method) do |node|
+          visit_child_nodes(node)
+        end
       end
 
       def replace(node, replacement)

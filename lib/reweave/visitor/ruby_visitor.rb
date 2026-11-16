@@ -377,7 +377,14 @@ module Reweave
 
       def extract_keyword_arguments(node)
         return {} unless node.arguments
-        kwargs = node.arguments.arguments.select { |a| a.is_a?(Prism::AssocNode) }
+        kwargs = []
+        node.arguments.arguments.each do |arg|
+          if arg.is_a?(Prism::AssocNode)
+            kwargs << arg
+          elsif arg.is_a?(Prism::KeywordHashNode)
+            kwargs.concat(arg.elements)
+          end
+        end
         kwargs.to_h { |a| [a.key.slice.sub(/:$/, "").to_sym, a.value] }
       end
 
