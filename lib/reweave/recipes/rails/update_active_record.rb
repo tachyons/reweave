@@ -30,12 +30,12 @@ module Reweave
         def visit_call_node(node)
           # update_attributes -> update
           if node.name == :update_attributes
-            replace_location(node.message_loc, "update")
+            replace_method_name(node, :update)
           end
 
           # update_attributes! -> update!
           if node.name == :update_attributes!
-            replace_location(node.message_loc, "update!")
+            replace_method_name(node, :update!)
           end
 
           # destroy_all with conditions -> where(...).destroy_all
@@ -55,9 +55,9 @@ module Reweave
           end
 
           # first/last with order -> order(...).first/last
-          if node.name == :first || node.name == :last
-            args = extract_arguments(node)
-            if args.any? { |a| a.is_a?(Prism::HashNode) }
+          if (node.name == :first || node.name == :last) && call_with_args?(node, 1)
+            arg = first_arg(node, Prism::HashNode)
+            if arg
               # Could have order: { created_at: :desc }
             end
           end

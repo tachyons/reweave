@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 require_relative "visitor"
+require_relative "recipe_helpers"
 
 module Reweave
   module Visitor
     class RubyVisitor < Base
+      include RecipeHelpers
+
       # Class/Module definitions
       def visit_class_node(node)
         super

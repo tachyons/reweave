@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative "lib/reweave/version"
+
 Gem::Specification.new do |spec|
   spec.name = "reweave"
-  spec.version = "0.1.0"
+  spec.version = Reweave::VERSION
   spec.authors = ["Reweave Contributors"]
   spec.email = ["aboobackervyd@gmail.com"]
 

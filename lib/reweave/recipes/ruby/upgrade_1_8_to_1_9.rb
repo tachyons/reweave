@@ -37,18 +37,7 @@ module Reweave
           return super unless @config[:convert_hash_arrows]
 
           node.elements.each do |elem|
-            next unless elem.is_a?(Prism::AssocNode)
-            next unless elem.key.is_a?(Prism::SymbolNode)
-
-            key_loc = elem.key.location
-            operator_loc = elem.operator_loc
-
-            if operator_loc && operator_loc.slice == "=>"
-              new_key = key_loc.slice.sub(/^:/, "") + ":"
-              start_offset = key_loc.start_offset
-              end_offset = operator_loc.end_offset
-              @edits.add(Editing.replace(source_id, start_offset, end_offset, new_key, recipe_name))
-            end
+            convert_hash_rocket_to_symbol_key(elem)
           end
           super
         end
@@ -58,12 +47,9 @@ module Reweave
           return super unless @config[:remove_require_rubygems]
 
           if match_call?(node, method: :require)
-            args = extract_arguments(node)
-            if args.size == 1 && args.first.is_a?(Prism::StringNode)
-              value = args.first.unescaped
-              if value == "rubygems"
-                replace(node, "")
-              end
+            arg = first_arg(node, Prism::StringNode)
+            if arg && string_node?(arg, "rubygems")
+              replace(node, "")
             end
           end
           super
@@ -74,9 +60,11 @@ module Reweave
         def visit_block_parameters_node(node)
           return super unless @config[:convert_block_args]
 
-          if node.parameters.size == 1 && node.parameters.first.is_a?(Prism::RequiredParameterNode)
-            param = node.parameters.first
-            if param.name == "x" || param.name == "y" || param.name == "it" || param.name.start_with?("_")
+          inner_params = node.parameters
+          requireds = inner_params.requireds
+          if requireds.size == 1 && inner_params.optionals.empty? && inner_params.rest.nil?
+            param = requireds.first
+            if %w[x y it].include?(param.name) || param.name.start_with?("_")
               replace_location(param.location, "it")
             end
           end

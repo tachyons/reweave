@@ -29,20 +29,8 @@ module Reweave
 
         def visit_call_node(node)
           # config.active_job.queue_adapter = :sidekiq -> :solid_queue
-          if match_call?(node, receiver: "config.active_job", method: :queue_adapter=)
-            args = extract_arguments(node)
-            if args.first&.is_a?(Prism::SymbolNode) && args.first.value == :sidekiq
-              replace(args.first, ":solid_queue")
-            end
-          end
-
           # config.active_job.queue_adapter = "sidekiq" -> "solid_queue"
-          if match_call?(node, receiver: "config.active_job", method: :queue_adapter=)
-            args = extract_arguments(node)
-            if args.first&.is_a?(Prism::StringNode) && args.first.value == "sidekiq"
-              replace(args.first, "\"solid_queue\"")
-            end
-          end
+          replace_config_value(node, %w[config active_job], %w[sidekiq], "solid_queue", method: :queue_adapter=)
 
           super
         end

@@ -29,28 +29,9 @@ module Reweave
 
         def visit_call_node(node)
           # config.cache_store = :redis_cache_store -> :solid_cache_store
-          if match_call?(node, receiver: "config", method: :cache_store=)
-            args = extract_arguments(node)
-            if args.first&.is_a?(Prism::SymbolNode) && args.first.value == :redis_cache_store
-              replace(args.first, ":solid_cache_store")
-            end
-          end
-
           # config.cache_store = :mem_cache_store -> :solid_cache_store
-          if match_call?(node, receiver: "config", method: :cache_store=)
-            args = extract_arguments(node)
-            if args.first&.is_a?(Prism::SymbolNode) && args.first.value == :mem_cache_store
-              replace(args.first, ":solid_cache_store")
-            end
-          end
-
           # config.cache_store = :memory_store -> :solid_cache_store
-          if match_call?(node, receiver: "config", method: :cache_store=)
-            args = extract_arguments(node)
-            if args.first&.is_a?(Prism::SymbolNode) && args.first.value == :memory_store
-              replace(args.first, ":solid_cache_store")
-            end
-          end
+          replace_config_value(node, %w[config], %w[redis_cache_store mem_cache_store memory_store], "solid_cache_store", method: :cache_store=)
 
           super
         end
