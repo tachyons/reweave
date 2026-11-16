@@ -40,6 +40,10 @@ module Reweave
 
       def inherited(subclass)
         subclass.instance_variable_set(:@options, options.dup) if @options
+        # Auto-register concrete recipe classes (not abstract base classes)
+        if subclass != Reweave::Recipe && subclass != Reweave::CompositeRecipe && subclass != Reweave::ScanningRecipe
+          Reweave::REGISTRY.register(subclass)
+        end
         super
       end
     end

@@ -28,6 +28,16 @@ module Reweave
     def find_by_display_name(display_name)
       @recipes.values.find { |r| r.display_name == display_name }
     end
+
+    # Auto-discover and load recipes from a directory
+    def discover_recipes(path = nil)
+      path ||= File.join(File.dirname(__FILE__), "..", "..", "..", "lib", "reweave", "recipes")
+      return unless Dir.exist?(path)
+
+      Dir.glob(File.join(path, "**", "*.rb")).each do |file|
+        require file
+      end
+    end
   end
 
   REGISTRY = RecipeRegistry.new

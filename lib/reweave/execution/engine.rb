@@ -88,6 +88,16 @@ module Reweave
             scanning_recipe.scan(source_file, accumulator, @context)
           end
           accumulators[scanning_recipe] = accumulator
+          @context.stats[:recipes_executed] += 1
+
+          # Generate output files from scanning results
+          generated_changes = scanning_recipe.generate(accumulator, project)
+          generated_changes.each do |change|
+            @change_set.add(change)
+            if change.created?
+              @context.stats[:files_created] += 1
+            end
+          end
         end
 
         # In dry-run mode, just run once

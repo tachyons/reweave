@@ -4,11 +4,16 @@
 require_relative "../lib/reweave"
 
 def require_recipe(name)
+  # First try to get from registry (already loaded)
+  recipe_class = Reweave::REGISTRY.get(name)
+  return recipe_class if recipe_class
+
   # Try to load from reweave/recipes (remove Reweave::Recipes:: prefix if present)
   path = name.gsub(/^Reweave::Recipes::/, "").gsub("::", "/")
   # Convert CamelCase to snake_case for file names
   path = path.gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2').gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase
   require "reweave/recipes/#{path}"
+  Reweave::REGISTRY.get(name)
 rescue LoadError => e
   # Try to load as a constant
   begin
@@ -25,8 +30,9 @@ when "run"
   recipe_name = ARGV.shift
   abort("Usage: reweave run <recipe> [options]") unless recipe_name
 
-  require_recipe(recipe_name)
-  recipe_class = Object.const_get(recipe_name)
+  Reweave::REGISTRY.discover_recipes
+  recipe_class = require_recipe(recipe_name)
+  abort("Recipe not found: #{recipe_name}") unless recipe_class
 
   # Parse recipe options from remaining ARGV
   options = {}
@@ -58,6 +64,7 @@ when "run"
   exit(result.success? ? 0 : 1)
 
 when "recipes"
+  Reweave::REGISTRY.discover_recipes
   puts "Available recipes:"
   Reweave::REGISTRY.names.each do |name|
     recipe_class = Reweave::REGISTRY.get(name)
@@ -68,8 +75,10 @@ when "describe"
   recipe_name = ARGV.shift
   abort("Usage: reweave describe <recipe>") unless recipe_name
 
-  require_recipe(recipe_name)
-  recipe = Object.const_get(recipe_name).new
+  Reweave::REGISTRY.discover_recipes
+  recipe_class = require_recipe(recipe_name)
+  abort("Recipe not found: #{recipe_name}") unless recipe_class
+  recipe = recipe_class.allocate # Don't initialize with required options
   puts "Name: #{recipe_name}"
   puts "Display: #{recipe.display_name}"
   puts "Description: #{recipe.description}"
