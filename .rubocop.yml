@@ -1,0 +1,15 @@
+inherit_gem:
+  standard: config/base.yml
+
+inherit_mode:
+  merge:
+    - Exclude
+    - ExtraDetails
+
+AllCops:
+  Exclude:
+    - 'bin/*'
+    - 'test_fixtures/**/*'
+    - 'spec/spec_helper.rb'
+    - 'vendor/**/*'
+    - 'tmp/**/*'

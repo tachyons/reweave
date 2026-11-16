@@ -1,0 +1,115 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/reweave"
+
+def require_recipe(name)
+  # Try to load from reweave/recipes (remove Reweave::Recipes:: prefix if present)
+  path = name.gsub(/^Reweave::Recipes::/, "").gsub("::", "/")
+  # Convert CamelCase to snake_case for file names
+  path = path.gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2').gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase
+  require "reweave/recipes/#{path}"
+rescue LoadError => e
+  # Try to load as a constant
+  begin
+    Object.const_get(name)
+  rescue NameError
+    abort("Recipe not found: #{name} (#{e.message})")
+  end
+end
+
+command = ARGV.shift
+
+case command
+when "run"
+  recipe_name = ARGV.shift
+  abort("Usage: reweave run <recipe> [options]") unless recipe_name
+
+  require_recipe(recipe_name)
+  recipe_class = Object.const_get(recipe_name)
+
+  # Parse recipe options from remaining ARGV
+  options = {}
+  recipe_class.options.each do |name, opt|
+    long_name = name.to_s.gsub("_", "-")
+    idx = ARGV.index("--#{long_name}")
+    if idx
+      options[name] = ARGV[idx + 1]
+      ARGV.delete_at(idx)
+      ARGV.delete_at(idx)
+    end
+  end
+
+  dry_run = ARGV.include?("--dry-run") || ARGV.include?("-n")
+  ARGV.delete("--dry-run")
+  ARGV.delete("-n")
+  path = ARGV.find { |a| !a.start_with?("-") } || "."
+
+  recipe = recipe_class.new(**options)
+
+  result = Reweave.run(recipe, path: path, dry_run: dry_run)
+  puts result.summary
+
+  if dry_run && result.changed?
+    puts "\n--- Diffs ---"
+    puts result.diffs
+  end
+
+  exit(result.success? ? 0 : 1)
+
+when "recipes"
+  puts "Available recipes:"
+  Reweave::REGISTRY.names.each do |name|
+    recipe_class = Reweave::REGISTRY.get(name)
+    puts "  #{name} - #{recipe_class.display_name}"
+  end
+
+when "describe"
+  recipe_name = ARGV.shift
+  abort("Usage: reweave describe <recipe>") unless recipe_name
+
+  require_recipe(recipe_name)
+  recipe = Object.const_get(recipe_name).new
+  puts "Name: #{recipe_name}"
+  puts "Display: #{recipe.display_name}"
+  puts "Description: #{recipe.description}"
+  puts "Options:"
+  recipe.class.options.each do |name, opt|
+    req = opt.required? ? " (required)" : ""
+    def_str = opt.default ? " [default: #{opt.default.inspect}]" : ""
+    puts "  #{name}: #{opt.type}#{req}#{def_str}"
+    puts "    #{opt.description}" if opt.description
+  end
+
+when "roundtrip"
+  file = ARGV.shift
+  abort("Usage: reweave roundtrip <file.rb>") unless file
+
+  source = File.read(file)
+  result = Reweave.parse(source)
+  if result.success?
+    puts "✓ Parse successful"
+    puts "Diagnostics: #{result.diagnostics.size}"
+  else
+    puts "✗ Parse failed"
+    result.errors.each { |e| puts "  #{e[:message]} at #{e[:start_line]}:#{e[:start_column]}" }
+    exit 1
+  end
+
+else
+  puts <<~USAGE
+    Reweave - Automated Ruby source transformation
+
+    Commands:
+      run <recipe> [--dry-run] [path]    Execute a recipe
+      recipes                            List available recipes
+      describe <recipe>                  Show recipe details
+      roundtrip <file.rb>                Test parsing a file
+
+    Examples:
+      reweave run MyRecipe --dry-run
+      reweave run MyRecipe -n .
+      reweave recipes
+  USAGE
+  exit 1
+end
