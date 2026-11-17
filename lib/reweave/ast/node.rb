@@ -8,7 +8,7 @@ module Reweave
     # for recipe authors. Hides Prism internals and provides
     # transformation-friendly methods.
     class Node
-      attr_reader :prism_node, :source, :source_file
+      attr_reader :prism_node, :source_file
 
       def initialize(prism_node, source: nil, source_file: nil)
         @prism_node = prism_node
