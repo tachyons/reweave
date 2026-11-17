@@ -19,7 +19,7 @@ module Reweave
           receiver: ->(instance) { instance.config[:receiver] },
           args: ->(instance) { ->(node) { true } }
         ) do |node, instance|
-          node.replace(node.receiver ? "#{node.receiver_name}.#{instance.config[:new_name]}" : instance.config[:new_name])
+          node.replace_location(node.message_loc, instance.config[:new_name])
         end
       end
     end

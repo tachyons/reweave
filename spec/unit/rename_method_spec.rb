@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require_relative "../../lib/reweave"
-require_relative "../../lib/reweave/recipes/ruby/rename_method"
+require_relative "../../lib/reweave/recipes/ruby/declarative_rename"
 
-RSpec.describe Reweave::Recipes::Ruby::RenameMethod do
+RSpec.describe Reweave::Recipes::Ruby::DeclarativeRename do
   def run_recipe(source, recipe)
     Reweave.run(recipe, source: source, dry_run: true)
   end
@@ -55,6 +55,7 @@ RSpec.describe Reweave::Recipes::Ruby::RenameMethod do
     result = run_recipe("  user.old_method  \n", recipe)
 
     expect(result).to be_success
+    expect(result).to be_changed
     expect(result.changed_files.first.updated_source).to eq("  user.new_method  \n")
   end
 

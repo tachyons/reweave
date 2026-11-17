@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require_relative "../../lib/reweave"
-require_relative "../../lib/reweave/recipes/ruby/rename_method"
+require_relative "../../lib/reweave/recipes/ruby/declarative_rename"
 require_relative "../../lib/reweave/recipes/ruby/upgrade_1_8_to_1_9"
-require_relative "../../lib/reweave/recipes/ruby/modernize_syntax"
+require_relative "../../lib/reweave/recipes/ruby/declarative_modernize_syntax"
 require_relative "../../lib/reweave/recipes/rails/solid_queue_migration"
 require_relative "../../lib/reweave/recipes/rails/solid_cache_migration"
 
@@ -14,7 +14,7 @@ RSpec.describe "RecipeHelpers integration" do
 
   describe "replace_method_name helper" do
     it "renames method calls using the helper" do
-      recipe = Reweave::Recipes::Ruby::RenameMethod.new(old_name: "old_method", new_name: "new_method")
+      recipe = Reweave::Recipes::Ruby::DeclarativeRename.new(old_name: "old_method", new_name: "new_method")
       result = run_recipe("user.old_method", recipe)
 
       expect(result).to be_success
@@ -69,8 +69,8 @@ RSpec.describe "RecipeHelpers integration" do
       expect(result.changed_files.first.updated_source).to eq("{ a: 1, b: 2 }")
     end
 
-    it "converts hash rockets in modernize_syntax" do
-      recipe = Reweave::Recipes::Ruby::ModernizeSyntax.new(convert_hash_arrows: true)
+    it "converts hash rockets in declarative_modernize_syntax" do
+      recipe = Reweave::Recipes::Ruby::DeclarativeModernizeSyntax.new(convert_hash_arrows: true)
       result = run_recipe("{ :a => 1 }", recipe)
 
       expect(result).to be_success

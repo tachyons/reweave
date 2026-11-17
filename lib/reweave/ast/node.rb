@@ -41,6 +41,10 @@ module Reweave
         @prism_node.name if @prism_node.respond_to?(:name)
       end
 
+      def message_loc
+        @prism_node.message_loc if @prism_node.respond_to?(:message_loc)
+      end
+
       def receiver
         if @prism_node.respond_to?(:receiver) && @prism_node.receiver
           self.class.new(@prism_node.receiver, source: @source, source_file: @source_file)
