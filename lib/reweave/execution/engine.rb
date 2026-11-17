@@ -298,6 +298,10 @@ module Reweave
         if recipe.is_a?(ScanningRecipe)
           accumulator = accumulators[recipe]
           recipe.get_visitor(accumulator, @context)
+        elsif recipe.method(:get_visitor).arity == 2
+          # Transformation recipes opting in (arity 2) receive the whole
+          # accumulators hash so they can read another recipe's scan results.
+          recipe.get_visitor(accumulators, @context)
         else
           recipe.get_visitor(@context)
         end

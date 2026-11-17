@@ -22,12 +22,7 @@ REQUIRED_OPTIONS = {
 # Recipes excluded from the smoke loop.
 SKIP_SMOKE = {
   # Hits the network (Ruby advisory databases) — not hermetic.
-  "Reweave::Recipes::Security::CVEDatabaseScan" => "requires network access",
-  # Composite passes a visitor where the engine expects a recipe, and
-  # FindMethodDefinitions assigns @accumulator on a frozen recipe. Both crash
-  # on every run. https://github.com/tachyons/reweave/issues/46
-  "Reweave::Recipes::Ruby::RemoveUnusedMethods" => "broken composite wiring, see #46",
-  "Reweave::Recipes::Ruby::RemoveUnusedMethods::FindMethodDefinitions" => "mutates frozen recipe, see #46"
+  "Reweave::Recipes::Security::CVEDatabaseScan" => "requires network access"
 }.freeze
 
 RSpec.describe "Recipe e2e over fixture codebases", :e2e do
@@ -52,7 +47,11 @@ RSpec.describe "Recipe e2e over fixture codebases", :e2e do
         results.each do |result|
           expect(result.error).to be_nil
           expect(result).to be_success
-          expect(result.stats[:recipes_executed]).to be >= 1
+          # The remover is a deliberate no-op without its scanner sibling —
+          # nothing in accumulators, so the engine creates no visitor for it.
+          unless recipe_class.name.end_with?("RemoveUnusedMethodsRemover")
+            expect(result.stats[:recipes_executed]).to be >= 1
+          end
         end
       end
     end
@@ -123,6 +122,18 @@ RSpec.describe "Recipe e2e over fixture codebases", :e2e do
       jobs = result.changed_files.find { |f| f.path.end_with?("report_job.rb") }
 
       expect(jobs.updated_source).to include("User.lookup(user_id)")
+    end
+
+    it "RemoveUnusedMethods deletes definitions that are never called" do
+      result = Reweave.run(
+        Reweave::Recipes::Ruby::RemoveUnusedMethods.new,
+        path: RUBY_APP, dry_run: true
+      )
+      stable = result.changed_files.find { |f| f.path.end_with?("stable.rb") }
+
+      expect(stable).not_to be_nil
+      expect(stable.updated_source).not_to include("def describe")
+      expect(stable.updated_source).to include("class Widget")
     end
   end
 end
