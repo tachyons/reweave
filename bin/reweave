@@ -166,6 +166,42 @@ when "roundtrip"
     exit 1
   end
 
+when "skills"
+  subcommand = ARGV.shift
+  case subcommand
+  when "list", "ls"
+    Reweave::Skills.list_installed
+  when "available"
+    Reweave::Skills.list_available
+  when "install", "add"
+    skill_name = ARGV.shift
+    abort("Usage: reweave skills install <skill_name>") unless skill_name
+    Reweave::Skills.install(skill_name)
+  when "remove", "rm"
+    skill_name = ARGV.shift
+    abort("Usage: reweave skills remove <skill_name>") unless skill_name
+    Reweave::Skills.remove(skill_name)
+  when "help", nil
+    puts <<~USAGE
+      Skills management for AI agents
+
+      Commands:
+        skills list              List installed skills
+        skills available         List available skills to install
+        skills install <name>    Install a skill
+        skills remove <name>     Remove an installed skill
+
+      Examples:
+        reweave skills available
+        reweave skills install rails-migrations
+        reweave skills list
+        reweave skills remove rails-migrations
+
+    USAGE
+  else
+    abort("Unknown skills command: #{subcommand}")
+  end
+
 else
   puts <<~USAGE
     Reweave - Automated Ruby source transformation

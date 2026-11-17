@@ -10,6 +10,7 @@ require_relative "reweave/execution"
 require_relative "reweave/results"
 require_relative "reweave/discovery/file_discoverer"
 require_relative "reweave/config"
+require_relative "reweave/skills"
 
 module Reweave
   class Error < StandardError; end
