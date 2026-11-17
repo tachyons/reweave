@@ -22,11 +22,14 @@ module Reweave
           display_name "Find method definitions"
           description "Scans for all method definitions and calls"
 
+          attr_reader :accumulator
+
           def initial_accumulator
             {definitions: {}, calls: Set.new}
           end
 
           def scan(source_file, accumulator, context)
+            @accumulator = accumulator
             visitor = DefinitionScanner.new(context, source_file, accumulator)
             visitor.traverse(source_file.root)
           end
@@ -67,9 +70,8 @@ module Reweave
             @scanner = scanner
           end
 
-          def run(source_file, context, accumulator)
-            @context = context
-            @accumulator = accumulator
+          def run(source_file)
+            @accumulator = @scanner.accumulator
             @source_file = source_file
             traverse(source_file.root)
             edits
@@ -82,7 +84,6 @@ module Reweave
             return super if calls.include?(method_name)
 
             # Method is unused, remove it
-            node.location
             delete(node)
             super
           end

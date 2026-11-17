@@ -40,24 +40,13 @@ module Reweave
         end
 
         def visit_call_node(node)
-          # Match gem 'spring' in Gemfile
+          # Match gem 'spring' or gem 'spring', group: :development in Gemfile
           if node.name == :gem
             args = extract_arguments(node)
             if args.first&.is_a?(Prism::StringNode)
               gem_name = args.first.value
               if RemoveDeprecatedGems::DEPRECATED_GEMS.include?(gem_name)
                 # Delete the entire gem line
-                delete(node)
-              end
-            end
-          end
-
-          # Match gem 'spring', group: :development
-          if node.name == :gem
-            args = extract_arguments(node)
-            if args.first&.is_a?(Prism::StringNode)
-              gem_name = args.first.value
-              if RemoveDeprecatedGems::DEPRECATED_GEMS.include?(gem_name)
                 delete(node)
               end
             end

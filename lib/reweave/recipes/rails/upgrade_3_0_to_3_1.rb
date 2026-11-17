@@ -32,8 +32,51 @@ module Reweave
         end
 
         def visit_call_node(node)
-          # Convert image_tag with old paths
-          # This is minimal for now
+          # Convert image_tag, stylesheet_link_tag, javascript_include_tag with old asset paths
+          # Asset pipeline changes: public/images -> app/assets/images
+          if @config[:convert_assets] && match_call?(node, method: :image_tag)
+            args = extract_arguments(node)
+            if args.first&.is_a?(Prism::StringNode)
+              path = args.first.unescaped
+              if path.start_with?("/images/")
+                new_path = path.sub("/images/", "")
+                replace(args.first, "\"#{new_path}\"")
+              end
+            end
+          end
+
+          # stylesheet_link_tag with old paths
+          if @config[:convert_assets] && match_call?(node, method: :stylesheet_link_tag)
+            args = extract_arguments(node)
+            if args.first&.is_a?(Prism::StringNode)
+              path = args.first.unescaped
+              if path.start_with?("/stylesheets/")
+                new_path = path.sub("/stylesheets/", "")
+                replace(args.first, "\"#{new_path}\"")
+              end
+            end
+          end
+
+          # javascript_include_tag with old paths
+          if @config[:convert_assets] && match_call?(node, method: :javascript_include_tag)
+            args = extract_arguments(node)
+            if args.first&.is_a?(Prism::StringNode)
+              path = args.first.unescaped
+              if path.start_with?("/javascripts/")
+                new_path = path.sub("/javascripts/", "")
+                replace(args.first, "\"#{new_path}\"")
+              end
+            end
+          end
+
+          # Convert reversible migrations: change instead of up/down
+          if @config[:convert_migrations] && match_call?(node, method: :change)
+            # Already correct in 3.1+
+          end
+
+          # up/down -> change (this is more complex, would need class-level analysis)
+          # Skip for now
+
           super
         end
       end

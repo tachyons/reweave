@@ -28,18 +28,30 @@ module Reweave
         end
 
         # Replace obj.method(:itself) or ->(x) { x } with Kernel#itself / :itself.to_proc
-        def visit_call_node(node)
-          if match_call?(node, method: :itself) && !node.receiver
-            # obj.itself -> obj.itself (already correct)
-          end
-
+        def visit_lambda_node(node)
           # Convert ->(x) { x } to &:itself
-          if node.is_a?(Prism::LambdaNode) || (node.is_a?(Prism::CallNode) && match_call?(node, method: :lambda))
-            body = node.body
-            if body.is_a?(Prism::BlockNode) && body.body.is_a?(Prism::CallNode)
-              # This is complex, skip for now
+          body = node.body
+          if body.is_a?(Prism::StatementsNode) && body.body.size == 1
+            stmt = body.body.first
+            if stmt.is_a?(Prism::LocalVariableReadNode)
+              replace(node, "&:itself")
             end
           end
+          super
+        end
+
+        def visit_call_node(node)
+          # Convert lambda { |x| x } to &:itself
+          if match_call?(node, method: :lambda)
+            block = node.block
+            if block&.body&.is_a?(Prism::StatementsNode) && block.body.body.size == 1
+              stmt = block.body.body.first
+              if stmt.is_a?(Prism::LocalVariableReadNode)
+                replace(node, "&:itself")
+              end
+            end
+          end
+
           super
         end
       end

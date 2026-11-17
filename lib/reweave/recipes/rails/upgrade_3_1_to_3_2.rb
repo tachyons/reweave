@@ -31,6 +31,17 @@ module Reweave
         end
 
         def visit_call_node(node)
+          # Convert key-value store syntax: Rails.cache -> Rails.cache
+          # ActiveSupport::Cache::Store interface is mostly compatible
+          # But store implementations may have changed
+          if @config[:convert_key_value_store]
+            # Rails 3.2 deprecated some cache store options
+            # Redis store configuration changes are in config, not syntax
+          end
+
+          # Tagged logging: Rails.logger -> Rails.logger (already compatible)
+          # But config.log_tags is new
+
           super
         end
       end

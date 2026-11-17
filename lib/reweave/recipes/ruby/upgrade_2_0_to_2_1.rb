@@ -37,9 +37,26 @@ module Reweave
 
           if match_call?(node, method: :to_h)
             receiver = node.receiver
+            # Case 1: [[:a, 1], [:b, 2]].to_h -> {a: 1, b: 2}
+            if receiver&.is_a?(Prism::ArrayNode)
+              all_pairs = receiver.elements.all? do |elem|
+                elem.is_a?(Prism::ArrayNode) && elem.elements.size == 2 &&
+                  elem.elements[0].is_a?(Prism::SymbolNode)
+              end
+              if all_pairs
+                pairs = receiver.elements.map do |elem|
+                  key = elem.elements[0].value
+                  value = source_for(elem.elements[1])
+                  "#{key}: #{value}"
+                end.join(", ")
+                replace(node, "{ #{pairs} }")
+              end
+            end
+
+            # Case 2: hash.map { |k, v| ... }.to_h -> hash.transform_values { |v| ... }
             if receiver && match_call?(receiver, method: :map)
-              # [[:a, 1], [:b, 2]].map { ... }.to_h -> could be transform_values
-              # For now, leave as is but could be optimized
+              # For now, we could convert to transform_values if the block only uses the value
+              # This is complex to detect reliably, so leave as is
             end
           end
           super

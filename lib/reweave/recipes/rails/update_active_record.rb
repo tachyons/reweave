@@ -42,7 +42,12 @@ module Reweave
           if node.name == :destroy_all
             args = extract_arguments(node)
             unless args.empty?
-              # This is a complex transformation, skip for safety
+              # Convert User.destroy_all(active: true) to User.where(active: true).destroy_all
+              receiver = node.receiver
+              if receiver
+                arg_source = args.map { |a| source_for(a) }.join(", ")
+                replace(node, "#{source_for(receiver)}.where(#{arg_source}).destroy_all")
+              end
             end
           end
 
@@ -50,17 +55,29 @@ module Reweave
           if node.name == :delete_all
             args = extract_arguments(node)
             unless args.empty?
-              # This is a complex transformation, skip for safety
+              receiver = node.receiver
+              if receiver
+                arg_source = args.map { |a| source_for(a) }.join(", ")
+                replace(node, "#{source_for(receiver)}.where(#{arg_source}).delete_all")
+              end
             end
           end
 
           # first/last with order -> order(...).first/last
           if (node.name == :first || node.name == :last) && call_with_args?(node, 1)
-            arg = first_arg(node, Prism::HashNode)
+            arg = first_arg(node, Prism::HashNode, Prism::KeywordHashNode)
             if arg
-              # Could have order: { created_at: :desc }
+              receiver = node.receiver
+              if receiver
+                replace(node, "#{source_for(receiver)}.order(#{source_for(arg)}).#{node.name}")
+              end
             end
           end
+
+          # pluck(*columns) -> select(:col1, :col2).map { ... } (for AR::Relation)
+          # Not directly convertible, but worth noting
+
+          # find_by_sql -> connection.select_all (not a simple conversion)
 
           super
         end

@@ -37,8 +37,8 @@ module Reweave
             ancestors = cursor.ancestors
             is_job_class = ancestors.any? do |ancestor|
               ancestor.node.is_a?(Prism::ClassNode) &&
-                ancestor.node.superclass&.slice&.include?("ApplicationJob") ||
-                ancestor.node.superclass&.slice&.include?("ActiveJob::Base")
+                (ancestor.node.superclass&.slice&.include?("ApplicationJob") ||
+                 ancestor.node.superclass&.slice&.include?("ActiveJob::Base"))
             end
 
             if is_job_class

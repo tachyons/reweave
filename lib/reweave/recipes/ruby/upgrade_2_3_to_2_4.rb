@@ -36,8 +36,21 @@ module Reweave
           # Convert hash.delete_if { |_, v| v.nil? } to hash.compact
           if @config[:convert_hash_compact] && match_call?(node, method: :delete_if)
             block = node.block
-            if block && block.body.is_a?(Prism::IfNode)
-              # Complex to detect, skip for now
+            if block
+              # Check if block body is a single call checking for nil
+              body = block.body
+              if body.is_a?(Prism::StatementsNode) && body.body.size == 1
+                stmt = body.body.first
+                # Check for v.nil? or v == nil
+                if stmt.is_a?(Prism::CallNode) && stmt.receiver.is_a?(Prism::LocalVariableReadNode)
+                  no_args = stmt.arguments.nil? || stmt.arguments.arguments.empty?
+                  if (stmt.name == :nil? && no_args) ||
+                      (stmt.name == :== && extract_arguments(stmt).first&.is_a?(Prism::NilNode))
+                    # This is delete_if { |_, v| v.nil? } or delete_if { |_, v| v == nil }
+                    replace(node, "#{source_for(node.receiver)}.compact")
+                  end
+                end
+              end
             end
           end
 

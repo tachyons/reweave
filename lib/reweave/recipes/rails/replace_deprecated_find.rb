@@ -49,10 +49,31 @@ module Reweave
             end
           end
 
-          # Match dynamic finders like find_by_name_and_email
+          # Match dynamic finders like find_by_name_and_email -> where(name: ..., email: ...).first
           if @include_find_by && node.name.to_s.start_with?("find_by_")
-            # Could convert to where(name: ..., email: ...).first
-            # For now just note it
+            method_name = node.name.to_s
+            # Extract field names from find_by_name_and_email
+            fields_str = method_name.delete_prefix("find_by_")
+            fields = fields_str.split("_and_")
+
+            # Build where clause
+            fields.map do |field|
+              arg = first_arg(node, Prism::SymbolNode, Prism::StringNode)
+              if arg
+                source_for(arg)
+                # For dynamic finders, the argument is typically passed directly
+                # But we need to extract all arguments
+              end
+            end
+
+            args = extract_arguments(node)
+            if args.size == fields.size
+              where_clauses = fields.zip(args).map do |field, value|
+                "#{field}: #{source_for(value)}"
+              end.join(", ")
+              receiver = extract_receiver_name(node)
+              replace(node, "#{receiver}.where(#{where_clauses}).first")
+            end
           end
 
           super

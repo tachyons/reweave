@@ -34,14 +34,33 @@ module Reweave
             if args.first&.is_a?(Prism::StringNode)
               # Check if it's a simple match without :via
               kwargs = extract_keyword_arguments(node)
-              unless kwargs[:via]
+              via = kwargs[:via]
+              if via
+                # match "/path", via: :post -> post "/path"
+                method = via.is_a?(Prism::SymbolNode) ? via.value : "get"
+                replace(node, "#{method} #{source_for(args.first)}")
+              else
                 replace_location(node.message_loc, "get")
               end
             end
           end
 
-          # constraints(id: /regex/) -> constraints(id: /regex/) (already correct)
-          # namespace :admin do ... end -> namespace :admin do ... end (already correct)
+          # constraints(id: /regex/) -> already correct, just ensure it's used properly
+          if match_call?(node, method: :constraints)
+            # constraints(id: /regex/) is already correct
+            # But we can flag nested constraints
+          end
+
+          # namespace :admin do ... end -> already correct
+          # scope :admin do ... end -> already correct
+
+          # resources :users -> already correct
+          # resource :user -> already correct
+
+          # root "home#index" -> already correct
+
+          # get "/login" -> already correct
+          # post "/login" -> already correct
 
           super
         end
