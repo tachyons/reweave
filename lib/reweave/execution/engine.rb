@@ -6,6 +6,7 @@ require_relative "project"
 require_relative "../../reweave/results/execution_result"
 require_relative "../../reweave/results/changeset"
 require_relative "../../reweave/recipe/scanning_recipe"
+require_relative "../../reweave/semantic/cache"
 require_relative "../../reweave/semantic/analyzer"
 
 module Reweave
@@ -76,8 +77,11 @@ module Reweave
         project = Project.from_path(path, patterns: patterns || ["**/*.rb"], exclude: exclude || [])
         @change_set = Results::ChangeSet.new
 
-        # Build cross-file symbol table and type table for semantic analysis
-        analysis_result = Semantic::Analyzer.new(project).analyze
+        # Create shared cache for this execution
+        cache = Semantic::Cache.new
+
+        # Build cross-file symbol table and type table for semantic analysis (with caching)
+        analysis_result = Semantic::Analyzer.new(project, cache: cache).analyze
         @context.symbol_table = analysis_result.symbol_table
         @context.type_table = analysis_result.type_table
         @context.stats[:symbols_resolved] = analysis_result.symbol_table.size

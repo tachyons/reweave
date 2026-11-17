@@ -84,6 +84,11 @@ module Reweave
         size.zero?
       end
 
+      # Iterate over all symbols (for serialization, etc.)
+      def each_symbol(&block)
+        all_symbols.each(&block)
+      end
+
       private
 
       def all_symbols

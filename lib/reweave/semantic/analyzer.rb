@@ -4,6 +4,7 @@ require_relative "symbol_table"
 require_relative "symbol_collector"
 require_relative "type_collector"
 require_relative "type_table"
+require_relative "cache"
 
 module Reweave
   module Semantic
@@ -13,13 +14,28 @@ module Reweave
     # constant definitions, and produces a cross-file symbol index and type
     # index that recipes can query for context-aware transformations.
     class Analyzer
-      def initialize(project)
+      def initialize(project, cache: nil)
         @project = project
+        @cache = cache || Cache.new
       end
 
       # Analyze all source files in the project and return a populated
-      # SymbolTable and TypeTable.
+      # SymbolTable and TypeTable. Uses cache if available and valid.
       def analyze
+        # Try to get cached result
+        cached = @cache.get(@project)
+        return cached if cached
+
+        # Perform fresh analysis
+        result = analyze_fresh
+
+        # Cache the result
+        @cache.set(@project, result)
+
+        result
+      end
+
+      def analyze_fresh
         symbol_table = SymbolTable.new
         type_table = TypeTable.new
 
@@ -35,6 +51,11 @@ module Reweave
         end
 
         AnalysisResult.new(symbol_table, type_table)
+      end
+
+      # Invalidate cache for this project
+      def invalidate_cache
+        @cache.invalidate(@project)
       end
     end
 
