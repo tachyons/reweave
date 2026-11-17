@@ -84,7 +84,7 @@ module Reweave
       def match_call_chain?(node, *chain, method: nil)
         return false unless match_call?(node, method: method)
         receiver = node.receiver
-        chain.reverse.each do |part|
+        chain.reverse_each do |part|
           return false unless receiver&.is_a?(Prism::CallNode) && receiver.name == part
           receiver = receiver.receiver
         end
