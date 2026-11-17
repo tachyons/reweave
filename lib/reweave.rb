@@ -11,6 +11,7 @@ require_relative "reweave/results"
 require_relative "reweave/discovery/file_discoverer"
 require_relative "reweave/config"
 require_relative "reweave/skills"
+require_relative "reweave/recipes/security"
 
 module Reweave
   class Error < StandardError; end

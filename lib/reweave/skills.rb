@@ -74,7 +74,11 @@ module Reweave
         name: "security-patches",
         description: "Security patch recipes for common vulnerabilities",
         category: "security",
-        recipes: [],
+        recipes: [
+          "CVEDatabaseScan",
+          "VulnerableMethods",
+          "PatchVerification"
+        ],
         version: "1.0.0"
       },
       "dependency-management" => {
