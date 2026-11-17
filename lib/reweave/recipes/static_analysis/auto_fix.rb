@@ -86,7 +86,7 @@ module Reweave
           inner_params = node.parameters
           inner_params.requireds
           # Check if any required params are unused
-          # This is a placeholder - real implementation would analyze usage
+          # See https://github.com/tachyons/reweave/issues/36
         end
       end
     end

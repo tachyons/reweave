@@ -56,7 +56,7 @@ module Reweave
             # Case 2: hash.map { |k, v| ... }.to_h -> hash.transform_values { |v| ... }
             if receiver && match_call?(receiver, method: :map)
               # For now, we could convert to transform_values if the block only uses the value
-              # This is complex to detect reliably, so leave as is
+              # See https://github.com/tachyons/reweave/issues/38
             end
           end
           super

@@ -43,7 +43,7 @@ module Reweave
             node.method_name.to_s
             node.receiver_name
             # Check against known breaking changes database
-            # This is a placeholder - real implementation would query a database
+            # See https://github.com/tachyons/reweave/issues/37
           end
         end
       end

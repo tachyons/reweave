@@ -9,7 +9,7 @@ module Reweave
       # Ruby 3.3 -> 4.0 syntax upgrades (speculative/preview)
       class Upgrade33To40 < Recipe
         display_name "Upgrade Ruby 3.3 to 4.0"
-        description "Converts Ruby 3.3 syntax to 4.0: breaking changes (placeholder for future)"
+        description "Converts Ruby 3.3 syntax to 4.0: breaking changes (see https://github.com/tachyons/reweave/issues/39)"
 
         def get_visitor(context)
           Upgrade33To40Visitor.new(context)
