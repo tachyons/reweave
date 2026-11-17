@@ -56,7 +56,7 @@ module Reweave
         name: "modernize-syntax",
         description: "Modernize Ruby syntax (hash rockets, lambda arrows, block args)",
         category: "ruby",
-        recipes: ["ModernizeSyntax", "DeclarativeModernizeSyntax"],
+        recipes: ["DeclarativeModernizeSyntax"],
         version: "1.0.0"
       },
       "code-cleanup" => {
@@ -66,7 +66,6 @@ module Reweave
         recipes: [
           "RemoveUnusedMethods",
           "FindMethodCalls",
-          "RenameMethod",
           "DeclarativeRename"
         ],
         version: "1.0.0"

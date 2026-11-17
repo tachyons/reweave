@@ -273,8 +273,8 @@ reweave run UpgradeRails --dry-run
 ## Built-in Recipes
 
 ### Ruby Core
-- `ModernizeSyntax` — Hash rockets, lambda arrows, block args
-- `RenameMethod` — Rename method calls across codebase
+- `DeclarativeModernizeSyntax` — Hash rockets, lambda arrows, block args
+- `DeclarativeRename` — Rename method calls across codebase
 - `RemoveUnusedMethods` — Remove uncalled methods
 - `FindMethodCalls` — Scan and report method calls
 
@@ -329,8 +329,8 @@ Pre-packaged skills:
 |-------|----------|---------|-------------|
 | `rails-migrations` | rails | 10 | Upgrade Rails 2.3 → 8.1 |
 | `ruby-upgrades` | ruby | 15 | Upgrade Ruby 1.8 → 4.0 |
-| `modernize-syntax` | ruby | 2 | Hash rockets, lambdas, block args |
-| `code-cleanup` | ruby | 4 | Remove unused, find calls, rename |
+| `modernize-syntax` | ruby | 1 | Hash rockets, lambdas, block args |
+| `code-cleanup` | ruby | 3 | Remove unused, find calls, rename |
 | `security-patches` | security | 0 | CVE/ vulnerability fixes (placeholder) |
 | `dependency-management` | bundler | 0 | Gemfile upgrades (placeholder) |
 
