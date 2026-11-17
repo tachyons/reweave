@@ -13,6 +13,10 @@ Reweave is a native Ruby source code transformation framework that enables safe,
 - **Prism-powered** — Uses Ruby's official parser for 100% syntax compatibility
 - **Strong testing** — Built-in RSpec testing DSL for recipes
 - **CLI included** — Run transformations from the command line
+- **Declarative DSL** — Write recipes without Prism internals
+- **Type inference** — Cross-file type analysis for context-aware transformations
+- **Semantic cache** — Cross-recipe type sharing with automatic invalidation
+- **Skills CLI** — Discover and install recipe packs for common migrations
 
 ## Installation
 
@@ -62,6 +66,27 @@ class RenameDeprecatedMethodVisitor < Reweave::Visitor::RubyVisitor
   def visit_call_node(node)
     return unless node.name == @old_name
     replace_location(node.message_loc, @new_name) if node.message_loc
+  end
+end
+```
+
+Or use the **declarative DSL** (recommended for new recipes):
+
+```ruby
+class DeclarativeRename < Reweave::Recipe::DeclarativeRecipe
+  display_name "Declarative rename method"
+  description "Renames a method call using the declarative DSL"
+
+  option :old_name, type: String, required: true
+  option :new_name, type: String, required: true
+  option :receiver, type: String, required: false
+
+  transform_call(
+    method: ->(instance) { ->(name) { name.to_s == instance.config[:old_name] } },
+    receiver: ->(instance) { instance.config[:receiver] },
+    args: ->(instance) { ->(node) { true } }
+  ) do |node, instance|
+    node.replace(node.receiver ? "#{node.receiver_name}.#{instance.config[:new_name]}" : instance.config[:new_name])
   end
 end
 ```
@@ -129,15 +154,69 @@ Recipes define transformations. They can be:
 - **Scanning recipes** — Analyze multiple files, accumulate data
 - **Composite recipes** — Compose multiple recipes
 
-### Visitors
+### Declarative DSL
 
-Visitors traverse the Prism AST and collect edits using a mutation API:
+The declarative DSL lets you write recipes without knowing Prism internals:
 
 ```ruby
-replace(node, "new_code")
-delete(node)
-insert_before(node, "prefix")
-insert_after(node, "suffix")
+class MyRecipe < Reweave::Recipe::DeclarativeRecipe
+  option :option_name, type: String, required: true
+
+  # Transform method calls
+  transform_call(
+    method: :method_name,
+    receiver: "ClassName",
+    args: ->(instance) { ->(node) { true } }
+  ) do |node, instance|
+    node.replace("new_code")
+  end
+
+  # Transform method definitions
+  transform_def(name: :initialize) do |node, instance|
+    # ...
+  end
+
+  # Transform class definitions
+  transform_class(name: "User") do |node, instance|
+    # ...
+  end
+
+  # Transform constant references
+  transform_constant(name: "OLD_CONSTANT") do |node, instance|
+    # ...
+  end
+
+  # Transform hash nodes
+  transform_hash do |node, instance|
+    # ...
+  end
+
+  # Transform lambda nodes
+  transform_lambda do |node, instance|
+    # ...
+  end
+
+  # Transform block parameters
+  transform_block_params do |node, instance|
+    # ...
+  end
+end
+```
+
+### Visitors
+
+For advanced use cases, visitors traverse the Prism AST and collect edits:
+
+```ruby
+class MyVisitor < Reweave::Visitor::RubyVisitor
+  def visit_call_node(node)
+    replace(node, "new_code")
+    delete(node)
+    insert_before(node, "prefix")
+    insert_after(node, "suffix")
+    super
+  end
+end
 ```
 
 ### Edits
@@ -158,31 +237,131 @@ The engine handles:
 - Dry-run mode
 - Result aggregation
 
+### Semantic Analysis
+
+Reweave includes cross-file semantic analysis:
+
+- **Symbol table** — Cross-file method/constant index
+- **Type inference** — Variable, method, and constant type inference
+- **Type table** — Stores inferred types for classes, methods, variables
+- **Semantic cache** — File-based caching with automatic invalidation
+
+```ruby
+# Use type information in recipes
+result.type_table.class_type("User")
+result.type_table.method_signature(:find_by_email)
+```
+
+### Skills CLI
+
+Manage recipe packs for common migrations:
+
+```bash
+# List available skills
+reweave skills available
+
+# Install a skill pack
+reweave skills install rails-migrations
+
+# List installed skills
+reweave skills list
+
+# Run recipes from installed skills
+reweave run UpgradeRails --dry-run
+```
+
+## Built-in Recipes
+
+### Ruby Core
+- `ModernizeSyntax` — Hash rockets, lambda arrows, block args
+- `RenameMethod` — Rename method calls across codebase
+- `RemoveUnusedMethods` — Remove uncalled methods
+- `FindMethodCalls` — Scan and report method calls
+
+### Ruby Version Upgrades
+- `Upgrade18To19` — Hash rockets, `require 'rubygems'`, block args
+- `Upgrade19To20` — Symbol arrays (`%i`), `__dir__`
+- `Upgrade20To21` — `Hash#to_h`, required kwargs
+- `Upgrade21To22` — Symbol GC, `Kernel#itself`
+- `Upgrade22To23` — Safe navigation (`&.`), `Hash#dig`
+- `Upgrade23To24` — `Regexp#match?`, `String#casecmp?`, `Hash#compact`
+- `Upgrade24To25` — `yield_self`/`then`, `Hash#slice`
+- `Upgrade25To26` — Endless ranges, `then` alias
+- `Upgrade26To27` — Numbered params (`_1`), beginless ranges
+- `Upgrade27To30` — Pattern matching, endless methods, `Array#union/difference/intersection`, `Hash#except`, `String#delete_prefix`
+- `Upgrade30To31` — `Array#intersect?`
+- ... up to Ruby 4.0
+
+### Rails Migrations
+- `ReplaceDeprecatedFind` — `find(:all)` → `all`, dynamic finders
+- `UpdateActiveRecord` — `update_attributes` → `update`, `destroy_all` conditions
+- `UpdateRailsRoutes` — `match` → HTTP verbs
+- `UpdateConfiguration` — Deprecated config options
+- `SolidQueueMigration` — ActiveJob → SolidQueue
+- `SolidCacheMigration` — Cache store → SolidCache
+- `ActiveJobContinuations` — `stopping?` checks
+- `RemoveDeprecatedGems` — Remove `spring`, `listen`, etc.
+- `ControllerMarkdownRendering` — `render inline` → `render markdown:`
+
+### Rails Version Upgrades
+- `Upgrade23To30` through `Upgrade80To81` — Version-specific migrations
+
+## Skills System
+
+Pre-packaged recipe collections for common migrations:
+
+```bash
+# List available skills
+reweave skills available
+
+# Install a skill
+reweave skills install rails-migrations
+
+# List installed
+reweave skills list
+
+# Run skill recipes
+reweave run UpgradeRails --dry-run
+```
+
+Pre-packaged skills:
+| Skill | Category | Recipes | Description |
+|-------|----------|---------|-------------|
+| `rails-migrations` | rails | 10 | Upgrade Rails 2.3 → 8.1 |
+| `ruby-upgrades` | ruby | 15 | Upgrade Ruby 1.8 → 4.0 |
+| `modernize-syntax` | ruby | 2 | Hash rockets, lambdas, block args |
+| `code-cleanup` | ruby | 4 | Remove unused, find calls, rename |
+| `security-patches` | security | 0 | CVE/ vulnerability fixes (placeholder) |
+| `dependency-management` | bundler | 0 | Gemfile upgrades (placeholder) |
+
 ## Testing
 
 Reweave includes a first-class testing DSL:
 
 ```ruby
 RSpec.describe RenameDeprecatedMethod do
-  it "renames method calls" do
-    rewrite("user.old_method")
-    expect_output("user.new_method")
+  def run_recipe(source, recipe = described_class.new)
+    Reweave.run(recipe, source: source, dry_run: true)
+  end
+
+  it "renames a simple method call" do
+    recipe = described_class.new(old_name: "old_method", new_name: "new_method")
+    result = run_recipe("user.old_method", recipe)
+
+    expect(result).to be_success
+    expect(result).to be_changed
+    expect(result.changed_files.first.updated_source).to eq("user.new_method")
   end
 
   it "handles multiple calls" do
-    rewrite("a.old_method; b.old_method")
-    expect_output("a.new_method; b.new_method")
+    recipe = described_class.new(old_name: "old_method", new_name: "new_method")
+    result = run_recipe("a.old_method; b.old_method", recipe)
+
+    expect(result).to be_changed
+    expect(result.changed_files.first.updated_source).to eq("a.new_method; b.new_method")
   end
 end
 ```
-
-## Built-in Recipes
-
-Coming soon:
-- Ruby modernization (hash syntax, keyword args, etc.)
-- Rails migrations (deprecated APIs, version upgrades)
-- RSpec transformations
-- Bundler/Gemfile updates
 
 ## Requirements
 

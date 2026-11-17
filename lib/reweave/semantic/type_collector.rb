@@ -295,12 +295,6 @@ module Reweave
           TypeFactory::RANGE
         when Prism::RegularExpressionNode
           TypeFactory::REGEXP
-        when Prism::TrueNode
-          TypeFactory::TRUE_CLASS
-        when Prism::FalseNode
-          TypeFactory::FALSE_CLASS
-        when Prism::NilNode
-          TypeFactory::NIL_CLASS
         when Prism::SelfNode
           @class_stack.last || TypeFactory.unknown
         when Prism::LocalVariableReadNode
@@ -394,13 +388,7 @@ module Reweave
           TypeFactory::ARRAY
         when :select, :filter, :reject
           TypeFactory::ARRAY
-        when :where, :find_by, :find_by!
-          if receiver_type.class_type?
-            TypeFactory.class_type(receiver_type.name)
-          else
-            TypeFactory.unknown
-          end
-        when :all, :find, :find_by
+        when :where, :find_by, :find_by!, :all, :find
           if receiver_type.class_type?
             TypeFactory.class_type(receiver_type.name)
           else
