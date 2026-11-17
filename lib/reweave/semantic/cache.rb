@@ -14,7 +14,7 @@ module Reweave
       end
 
       # Get cached analysis result for a project
-      # Returns nil if cache is invalid or doesn't exist
+      # Returns nil if cache is invalid, absent, or cannot be reconstructed.
       def get(project)
         cache_key = cache_key_for_project(project)
         cache_file = File.join(@cache_dir, "#{cache_key}.json")
@@ -29,6 +29,11 @@ module Reweave
         # Load cached result
         data = JSON.parse(File.read(cache_file))
         reconstruct_analysis_result(data)
+      rescue
+        # ponytail: cache is a best-effort optimization; a corrupt or
+        # incompatible entry just means recompute. Add schema versioning if
+        # cache hits ever need to be reliable.
+        nil
       end
 
       # Store analysis result in cache
@@ -44,6 +49,9 @@ module Reweave
         # Store metadata for invalidation
         meta = build_metadata(project)
         File.write(meta_file, JSON.pretty_generate(meta))
+      rescue
+        # Never let a cache write break an analysis run.
+        nil
       end
 
       # Invalidate cache for a project
@@ -145,20 +153,29 @@ module Reweave
         }
       end
 
-      def serialize_type(type)
+      def serialize_type(type, seen = Set.new)
         case type
         when Reweave::Semantic::PrimitiveType
           {type: "PrimitiveType", name: type.name}
         when Reweave::Semantic::ClassType
-          {
-            type: "ClassType",
-            name: type.name,
-            namespace: type.namespace,
-            superclass: type.superclass&.name,
-            methods: type.defined_methods.transform_values { |m| {return_type: serialize_type(m[:return_type]), param_types: m[:param_types].map { |pt| serialize_type(pt) }} }
-          }
+          # Class types can reference themselves (e.g. a method returning `self`).
+          # Serialize repeats shallowly to avoid infinite recursion.
+          if seen.include?(type.object_id)
+            {type: "ClassType", name: type.name, namespace: type.namespace, superclass: nil, methods: {}}
+          else
+            seen.add(type.object_id)
+            {
+              type: "ClassType",
+              name: type.name,
+              namespace: type.namespace,
+              superclass: type.superclass&.name,
+              methods: type.defined_methods.transform_values do |m|
+                {return_type: serialize_type(m[:return_type], seen), param_types: m[:param_types].map { |pt| serialize_type(pt, seen) }}
+              end
+            }
+          end
         when Reweave::Semantic::UnionType
-          {type: "UnionType", types: type.types.map { |t| serialize_type(t) }}
+          {type: "UnionType", types: type.types.map { |t| serialize_type(t, seen) }}
         when Reweave::Semantic::UnknownType
           {type: "UnknownType"}
         else

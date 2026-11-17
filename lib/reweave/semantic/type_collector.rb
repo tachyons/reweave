@@ -250,7 +250,7 @@ module Reweave
       # Block parameters
       def visit_block_parameters_node(node)
         if node.parameters
-          params = node.parameters.parameters
+          params = node.parameters
           params.requireds.each do |param|
             param_name = param.name.to_sym
             @local_variables[param_name] = TypeFactory.unknown
@@ -322,17 +322,19 @@ module Reweave
             TypeFactory.unknown
           end
         when Prism::IfNode
-          # Union of both branches
-          then_type = node.then_clause ? infer_type(node.then_clause) : TypeFactory::NIL_CLASS
-          else_type = node.else_clause ? infer_type(node.else_clause) : TypeFactory::NIL_CLASS
+          # Union of both branches. Prism stores the then-branch in `statements`
+          # (a StatementsNode) and the else/elsif branch in `subsequent`.
+          then_type = branch_result_type(node.statements)
+          else_type = branch_result_type(node.subsequent)
           if then_type == else_type
             then_type
           else
             TypeFactory.union(then_type, else_type)
           end
         when Prism::CaseNode
-          # Union of all when branches
-          branch_types = node.when_clauses.map { |wc| infer_type(wc.body) }
+          # Union of all when branches. Prism names these `conditions`.
+          branch_types = node.conditions.map { |condition| branch_result_type(condition.statements) }
+          branch_types << branch_result_type(node.else_clause&.statements) if node.else_clause
           if branch_types.uniq.size == 1
             branch_types.first
           else
@@ -340,6 +342,23 @@ module Reweave
           end
         else
           TypeFactory.unknown
+        end
+      end
+
+      # Infer the result type of a branch body. Prism wraps branches in
+      # StatementsNode; `subsequent` may be an ElseNode or a nested IfNode (elsif).
+      def branch_result_type(node)
+        return TypeFactory::NIL_CLASS unless node
+
+        case node
+        when Prism::StatementsNode
+          node.body.empty? ? TypeFactory::NIL_CLASS : infer_type(node.body.last)
+        when Prism::ElseNode
+          branch_result_type(node.statements)
+        when Prism::IfNode
+          infer_type(node)
+        else
+          infer_type(node)
         end
       end
 
@@ -419,12 +438,10 @@ module Reweave
       def infer_return_type(body)
         return nil unless body
 
-        # Last expression in the body is the return value
-        if body.is_a?(Prism::StatementsNode) && body.body.any?
-          infer_type(body.body.last)
-        elsif body.is_a?(Prism::CallNode) || body.is_a?(Prism::LiteralNode) || body.is_a?(Prism::VariableReadNode)
-          infer_type(body)
-        end
+        # Last expression in the body is the return value. `infer_type` already
+        # returns unknown for any node it does not recognize.
+        node = body.is_a?(Prism::StatementsNode) ? body.body.last : body
+        infer_type(node)
       end
 
       def infer_type_from_literal(node)
