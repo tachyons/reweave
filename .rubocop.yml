@@ -10,6 +10,7 @@ AllCops:
   Exclude:
     - 'bin/*'
     - 'test_fixtures/**/*'
+    - 'spec/fixtures/**/*'
     - 'spec/spec_helper.rb'
     - 'vendor/**/*'
     - 'tmp/**/*'

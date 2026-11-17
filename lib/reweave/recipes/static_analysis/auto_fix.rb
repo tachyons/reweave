@@ -64,7 +64,7 @@ module Reweave
         transform_block_params do |node, instance|
           next unless instance.config[:target_cops].empty? || instance.config[:target_cops].include?("Style/SingleLineBlockParams")
 
-          inner_params = node.parameters
+          inner_params = node.prism_node.parameters
           requireds = inner_params.requireds
           if requireds.size == 1 && inner_params.optionals.empty? && inner_params.rest.nil?
             param = requireds.first
@@ -83,7 +83,7 @@ module Reweave
         transform_block_params do |node, instance|
           next unless instance.config[:target_cops].empty? || instance.config[:target_cops].include?("Lint/UnusedBlockArgument")
 
-          inner_params = node.parameters
+          inner_params = node.prism_node.parameters
           inner_params.requireds
           # Check if any required params are unused
           # See https://github.com/tachyons/reweave/issues/36

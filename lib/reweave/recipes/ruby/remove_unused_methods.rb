@@ -29,7 +29,9 @@ module Reweave
           end
 
           def scan(source_file, accumulator, context)
-            @accumulator = accumulator
+            # ponytail: recipes are frozen by Recipe#initialize, so per-run
+            # state cannot live here; the composite wiring is broken regardless.
+            # https://github.com/tachyons/reweave/issues/46
             visitor = DefinitionScanner.new(context, source_file, accumulator)
             visitor.traverse(source_file.root)
           end
