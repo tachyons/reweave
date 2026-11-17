@@ -76,10 +76,12 @@ module Reweave
         project = Project.from_path(path, patterns: patterns || ["**/*.rb"], exclude: exclude || [])
         @change_set = Results::ChangeSet.new
 
-        # Build cross-file symbol table for semantic analysis
-        symbol_table = Semantic::Analyzer.new(project).analyze
-        @context.symbol_table = symbol_table
-        @context.stats[:symbols_resolved] = symbol_table.size
+        # Build cross-file symbol table and type table for semantic analysis
+        analysis_result = Semantic::Analyzer.new(project).analyze
+        @context.symbol_table = analysis_result.symbol_table
+        @context.type_table = analysis_result.type_table
+        @context.stats[:symbols_resolved] = analysis_result.symbol_table.size
+        @context.stats[:types_resolved] = analysis_result.type_table.stats[:node_types] || 0
 
         # Expand composite recipes
         expanded_recipes = expand_recipes(recipe)

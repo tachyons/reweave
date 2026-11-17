@@ -165,7 +165,8 @@ RSpec.describe Reweave::Semantic::Analyzer do
     RUBY
 
     analyzer = described_class.new(project)
-    table = analyzer.analyze
+    result = analyzer.analyze
+    table = result.symbol_table
 
     expect(table.size).to eq(4) # User class, User#name, Post class, Post#title
     expect(table.resolve_method(:name, "User")).to_not be_nil
@@ -192,7 +193,8 @@ RSpec.describe Reweave::Semantic::Analyzer do
     RUBY
 
     analyzer = described_class.new(project)
-    table = analyzer.analyze
+    result = analyzer.analyze
+    table = result.symbol_table
 
     # User#full_name defined in user.rb
     expect(table.resolve_method(:full_name, "User")).to_not be_nil

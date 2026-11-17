@@ -6,7 +6,7 @@ module Reweave
   module Execution
     class ExecutionContext
       attr_reader :project_root, :dry_run, :max_cycles, :logger, :diagnostics, :messages, :metadata, :stats
-      attr_accessor :symbol_table
+      attr_accessor :symbol_table, :type_table
 
       def initialize(project_root: ".", dry_run: true, max_cycles: 10, logger: nil)
         @project_root = File.expand_path(project_root)
