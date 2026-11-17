@@ -306,8 +306,9 @@ module Reweave
         # Reset visitor's edits for this file
         visitor.instance_variable_set(:@edits, Editing::EditSet.new)
 
-        # Update visitor's source_file
+        # Update visitor's source_file and link source_file to visitor
         visitor.instance_variable_set(:@source_file, source_file)
+        source_file.visitor = visitor
 
         # Traverse the AST - use run if available (for visitors that manage their own source_file)
         if visitor.respond_to?(:run)

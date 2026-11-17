@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "parser"
+require_relative "editing"
 
 module Reweave
   class SourceFile
@@ -14,7 +15,10 @@ module Reweave
       @root = @parse_result.root
       @diagnostics = @parse_result.diagnostics
       @identity = object_id
+      @visitor = nil
     end
+
+    attr_accessor :visitor
 
     def valid?
       @parse_result.success?
@@ -38,6 +42,26 @@ module Reweave
     def apply_edits(edits)
       @source = Editing::Editor.apply(@source, edits)
       reparse!
+    end
+
+    # Replace a node's source with new text
+    def replace(node, new_source)
+      loc = node.location
+      @edits ||= Editing::EditSet.new
+      @edits.add(Editing.replace(@identity, loc.start_offset, loc.end_offset, new_source, "AST::Node"))
+      @visitor&.instance_variable_get(:@edits)&.add(Editing.replace(@identity, loc.start_offset, loc.end_offset, new_source, "AST::Node"))
+    end
+
+    # Replace a location with new text
+    def replace_location(location, new_source)
+      @edits ||= Editing::EditSet.new
+      @edits.add(Editing.replace(@identity, location.start_offset, location.end_offset, new_source, "AST::Node"))
+      @visitor&.instance_variable_get(:@edits)&.add(Editing.replace(@identity, location.start_offset, location.end_offset, new_source, "AST::Node"))
+    end
+
+    # Access accumulated edits (for use during traversal)
+    def edits
+      @edits ||= Editing::EditSet.new
     end
 
     def ==(other)
