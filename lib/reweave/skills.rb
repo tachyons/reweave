@@ -83,9 +83,13 @@ module Reweave
       },
       "dependency-management" => {
         name: "dependency-management",
-        description: "Batch Gemfile/Gemfile.lock dependency upgrades",
+        description: "Batch Gemfile/Gemfile.lock dependency upgrades and synchronization",
         category: "bundler",
-        recipes: [],
+        recipes: [
+          "GemfileUpgrade",
+          "BreakingChangeDetector",
+          "MultiRepoSync"
+        ],
         version: "1.0.0"
       }
     }.freeze

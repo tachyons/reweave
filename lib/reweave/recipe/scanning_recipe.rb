@@ -3,6 +3,7 @@
 require_relative "recipe"
 
 module Reweave
+  # Scanning recipe base class
   class ScanningRecipe < Recipe
     def scanning_recipe?
       true

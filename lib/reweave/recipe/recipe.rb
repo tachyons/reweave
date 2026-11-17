@@ -41,7 +41,9 @@ module Reweave
       def inherited(subclass)
         subclass.instance_variable_set(:@options, options.dup) if @options
         # Auto-register concrete recipe classes (not abstract base classes)
-        if subclass != Reweave::Recipe && subclass != Reweave::CompositeRecipe && subclass != Reweave::ScanningRecipe
+        # Use string comparison to avoid constant loading order issues
+        subclass_name = subclass.name
+        unless subclass_name == "Reweave::Recipe" || subclass_name == "Reweave::CompositeRecipe" || subclass_name == "Reweave::ScanningRecipe"
           Reweave::REGISTRY.register(subclass)
         end
         super

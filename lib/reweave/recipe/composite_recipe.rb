@@ -3,6 +3,7 @@
 require_relative "recipe"
 
 module Reweave
+  # Composite recipe that combines multiple recipes
   class CompositeRecipe < Recipe
     def initialize(recipes = [], **kwargs)
       @recipes = recipes

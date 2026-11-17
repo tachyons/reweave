@@ -6,12 +6,15 @@ require_relative "reweave/source"
 require_relative "reweave/visitor"
 require_relative "reweave/editing"
 require_relative "reweave/recipe"
+require_relative "reweave/recipe/composite_recipe"
+require_relative "reweave/recipe/scanning_recipe"
 require_relative "reweave/execution"
 require_relative "reweave/results"
 require_relative "reweave/discovery/file_discoverer"
 require_relative "reweave/config"
 require_relative "reweave/skills"
 require_relative "reweave/recipes/security"
+require_relative "reweave/recipes/bundler/gemfile_upgrade"
 
 module Reweave
   class Error < StandardError; end
