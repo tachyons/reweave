@@ -53,6 +53,21 @@ class Reweave::Recipe::DeclarativeVisitor < Reweave::Visitor::RubyVisitor
     super
   end
 
+  def visit_hash_node(node)
+    apply_transforms(node, @source_file)
+    super
+  end
+
+  def visit_lambda_node(node)
+    apply_transforms(node, @source_file)
+    super
+  end
+
+  def visit_block_parameters_node(node)
+    apply_transforms(node, @source_file)
+    super
+  end
+
   private
 
   def apply_transforms(node, source_file)
@@ -65,6 +80,27 @@ class Reweave::Recipe::DeclarativeVisitor < Reweave::Visitor::RubyVisitor
       next unless match_receiver?(ast_node, transform[:receiver])
       next unless match_args?(ast_node, transform[:args])
       transform[:block].call(ast_node, @recipe_class)
+    end
+
+    # Apply hash transforms
+    if ast_node.prism_node.is_a?(Prism::HashNode)
+      @recipe_class.class.hash_transforms.each do |transform|
+        transform[:block].call(ast_node, @recipe_class)
+      end
+    end
+
+    # Apply lambda transforms
+    if ast_node.prism_node.is_a?(Prism::LambdaNode)
+      @recipe_class.class.lambda_transforms.each do |transform|
+        transform[:block].call(ast_node, @recipe_class)
+      end
+    end
+
+    # Apply block parameter transforms
+    if ast_node.prism_node.is_a?(Prism::BlockParametersNode)
+      @recipe_class.class.block_params_transforms.each do |transform|
+        transform[:block].call(ast_node, @recipe_class)
+      end
     end
 
     # Apply def transforms

@@ -37,6 +37,24 @@ module Reweave
         @constant_transforms << {name: name, block: block}
       end
 
+      # Define a transformation for hash nodes
+      def transform_hash(&block)
+        @hash_transforms ||= []
+        @hash_transforms << {block: block}
+      end
+
+      # Define a transformation for lambda nodes
+      def transform_lambda(&block)
+        @lambda_transforms ||= []
+        @lambda_transforms << {block: block}
+      end
+
+      # Define a transformation for block parameter nodes
+      def transform_block_params(&block)
+        @block_params_transforms ||= []
+        @block_params_transforms << {block: block}
+      end
+
       # Generic pattern matching transform
       def transform(pattern, &block)
         @generic_transforms ||= []
@@ -57,6 +75,18 @@ module Reweave
 
       def constant_transforms
         @constant_transforms || []
+      end
+
+      def hash_transforms
+        @hash_transforms || []
+      end
+
+      def lambda_transforms
+        @lambda_transforms || []
+      end
+
+      def block_params_transforms
+        @block_params_transforms || []
       end
 
       def generic_transforms
