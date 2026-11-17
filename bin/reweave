@@ -26,8 +26,15 @@ end
 def parse_common_options(args)
   options = {}
   options[:dry_run] = args.delete("--dry-run") || args.delete("-n")
-  options[:path] = args.delete_at(args.index("--path") || args.index("-p") || 0)
-  options[:path] = "." if options[:path] == "--path" || options[:path] == "-p" || options[:path].nil?
+
+  # Consume --path/-p VALUE (flag + value together), like --include/--exclude
+  path_idx = args.index("--path") || args.index("-p")
+  options[:path] = args.delete_at(path_idx + 1) if path_idx
+  args.delete_at(path_idx) if path_idx
+
+  # Fallback: first remaining positional is the path (or . if none)
+  options[:path] = "." if options[:path].nil? || options[:path].empty?
+
   options[:include] = args.delete_at(args.index("--include") + 1) if args.include?("--include")
   options[:exclude] = args.delete_at(args.index("--exclude") + 1) if args.include?("--exclude")
   options[:max_cycles] = args.delete_at(args.index("--max-cycles") + 1)&.to_i if args.include?("--max-cycles")

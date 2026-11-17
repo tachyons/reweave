@@ -253,10 +253,16 @@ module Reweave
           @context.stats[:total_edits] += edits.size
 
           if !@dry_run
+            # Capture original before mutating the in-memory source
+            original = source_file.source
             source_file.apply_edits(edits)
+            # Persist to disk
+            full_path = File.join(@context.project_root, source_file.path)
+            FileUtils.mkdir_p(File.dirname(full_path))
+            File.write(full_path, source_file.source)
             @change_set.add(Results::FileChange.new(
               path: source_file.path,
-              original_source: source_file.source,
+              original_source: original,
               updated_source: source_file.source,
               recipes: [recipe.display_name],
               change_type: :modified

@@ -78,7 +78,7 @@ RSpec.describe Reweave::Recipes::Ruby::DeclarativeRename do
 
       expect(result).to be_success
       expect(result).to be_changed
-      expect(result.changed_files.map(&:path).sort).to eq([File.join(tmpdir, "a.rb"), File.join(tmpdir, "b.rb")].sort)
+      expect(result.changed_files.map(&:path).sort).to eq(["a.rb", "b.rb"].sort)
       expect(result.changed_files.find { |f| f.path.end_with?("a.rb") }.updated_source).to eq("User.all(1)")
       expect(result.changed_files.find { |f| f.path.end_with?("b.rb") }.updated_source).to eq("User.all(2)")
     end

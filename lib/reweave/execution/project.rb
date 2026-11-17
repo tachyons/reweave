@@ -14,23 +14,29 @@ module Reweave
       end
 
       def self.from_path(root, patterns: ["**/*.rb"], exclude: [])
+        root = File.expand_path(root)
         files = Reweave::Discovery::FileDiscoverer.discover(root, patterns: patterns, exclude: exclude)
-        source_files = SourceSet.from_paths(files)
+        # Store paths relative to project root so writes go to the right place
+        rel_files = files.map { |f| f.delete_prefix(root + "/") }
+        source_files = SourceSet.from_paths(rel_files, root: root)
         new(root, source_files: source_files)
       end
 
       def add_source_file(path)
-        file = SourceFile.new(path: File.join(@root, path))
+        # path is relative to project root
+        abs = File.join(@root, path)
+        file = SourceFile.new(path: path)
+        file.source = File.read(abs, encoding: "bom|utf-8")
         @source_files.add(file)
         file
       end
 
       def remove_source_file(path)
-        @source_files.remove(File.join(@root, path))
+        @source_files.remove(path)
       end
 
       def find_source_file(path)
-        @source_files[File.join(@root, path)]
+        @source_files[path]
       end
 
       def valid_source_files

@@ -7,9 +7,10 @@ module Reweave
   class SourceFile
     attr_reader :path, :source, :parse_result, :root, :diagnostics, :encoding, :identity
 
-    def initialize(path:, source: nil)
+    def initialize(path:, source: nil, root: ".")
       @path = path
-      @source = source || File.read(path, encoding: "bom|utf-8")
+      abs_path = File.absolute_path?(path) ? path : File.join(root, path)
+      @source = source || File.read(abs_path, encoding: "bom|utf-8")
       @encoding = @source.encoding
       @parse_result = Parser.parse(@source, path: @path)
       @root = @parse_result.root
@@ -78,8 +79,8 @@ module Reweave
       @by_path = files.each_with_object({}) { |f, h| h[f.path] = f }
     end
 
-    def self.from_paths(paths)
-      new(paths.map { |p| SourceFile.new(path: p) })
+    def self.from_paths(paths, root: ".")
+      new(paths.map { |p| SourceFile.new(path: p, root: root) })
     end
 
     def each(&block)
