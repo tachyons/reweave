@@ -91,6 +91,17 @@ module Reweave
           "MultiRepoSync"
         ],
         version: "1.0.0"
+      },
+      "static-analysis" => {
+        name: "static-analysis",
+        description: "Static analysis auto-fix and RuboCop integration",
+        category: "static-analysis",
+        recipes: [
+          "RuboCopMapping",
+          "AutoFix",
+          "CustomCops"
+        ],
+        version: "1.0.0"
       }
     }.freeze
 

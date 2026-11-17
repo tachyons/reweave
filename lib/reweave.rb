@@ -15,6 +15,9 @@ require_relative "reweave/config"
 require_relative "reweave/skills"
 require_relative "reweave/recipes/security"
 require_relative "reweave/recipes/bundler/gemfile_upgrade"
+require_relative "reweave/recipes/static_analysis/rubocop_mapping"
+require_relative "reweave/recipes/static_analysis/auto_fix"
+require_relative "reweave/recipes/static_analysis/custom_cops"
 
 module Reweave
   class Error < StandardError; end
